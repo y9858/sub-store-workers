@@ -45,10 +45,10 @@ jobs:
       deploy_frontend: ${{ steps.frontend-check.outputs.deploy_frontend }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Restore Last Version Cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: |
             .last-backend-version
@@ -72,7 +72,7 @@ jobs:
       - name: Check If Frontend Deploy Is Enabled
         id: frontend-check
         env:
-          DEPLOY_SUB_STORE_FRONTEND: ${{ secrets.DEPLOY_SUB_STORE_FRONTEND }}
+          DEPLOY_SUB_STORE_FRONTEND: ${{ vars.DEPLOY_SUB_STORE_FRONTEND }}
         run: |
           if [ -n "$DEPLOY_SUB_STORE_FRONTEND" ]; then
             echo "deploy_frontend=true" >> "$GITHUB_OUTPUT"
@@ -95,12 +95,12 @@ jobs:
           fi
 
       - name: Checkout Workers Adapter Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -108,7 +108,7 @@ jobs:
           bun-version: latest
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: latest
 
@@ -171,12 +171,18 @@ jobs:
           curl -L "https://github.com/${{ env.FRONTEND_REPO }}/releases/download/${VERSION}/dist.zip" -o dist.zip
           unzip dist.zip -d frontend-dist
 
-      - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
         with:
-          apiToken: ${{ secrets.CF_API_TOKEN }}
-          accountId: ${{ secrets.CF_ACCOUNT_ID }}
-          command: pages deploy frontend-dist/dist --project-name=sub-store-frontend
+          node-version: 24
+
+      - name: Deploy to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: |
+          set -o pipefail
+          npx wrangler pages deploy frontend-dist/dist --project-name=sub-store-frontend 2>&1 | sed -E '/https:\/\/[^[:space:]]+\.pages\.dev/d'
 
   update-version-cache:
     needs: [check-updates, deploy-backend, deploy-frontend]
@@ -185,7 +191,7 @@ jobs:
 
     steps:
       - name: Restore Last Version Cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: |
             .last-backend-version
@@ -210,7 +216,7 @@ jobs:
           fi
 
       - name: Save version cache
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: |
             .last-backend-version
