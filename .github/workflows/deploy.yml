@@ -137,7 +137,7 @@ jobs:
 
       - name: Install backend dependencies
         working-directory: build/sub-store/backend
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile --ignore-scripts
 
       - name: Install dependencies
         working-directory: build
