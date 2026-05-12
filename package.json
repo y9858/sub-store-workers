@@ -5,17 +5,13 @@
     "type": "module",
     "scripts": {
         "prepare:quickjs-wasm": "bash scripts/copy-quickjs-wasm.sh",
-        "build:substore-deno": "node scripts/build-substore-deno-runtime.mjs",
         "dev:workers": "pnpm run prepare:quickjs-wasm && vite dev --config vite.workers.config.js --host 0.0.0.0 --port 3000",
-        "dev:deno": "deno task dev:deno",
         "build:workers": "pnpm run prepare:quickjs-wasm && vite build --config vite.workers.config.js",
         "preview:workers": "pnpm run prepare:quickjs-wasm && vite preview --config vite.workers.config.js --host 0.0.0.0 --port 3000",
         "fetch:substore": "bash scripts/fetch-substore.sh && pnpm run install:backend",
         "install:backend": "cd sub-store/backend && pnpm install --no-frozen-lockfile --ignore-scripts",
-        "migrate:deno-pg": "deno run -A scripts/deno-postgres-migrate.mjs",
         "deploy:workers:local": "pnpm run prepare:quickjs-wasm && npx wrangler deploy",
         "deploy:workers:action": "bash -o pipefail -c 'pnpm run prepare:quickjs-wasm && npx wrangler deploy 2>&1 | sed -e \"/workers.dev/d\" -e \"/https:\\\\/\\\\//d\"'",
-        "deploy:workers:deno": "bash -o pipefail -c 'deno deploy --prod 2>&1 | grep -vEi \"https?://|url:\"'",
         "tail": "npx wrangler tail --format=pretty"
     },
     "devDependencies": {

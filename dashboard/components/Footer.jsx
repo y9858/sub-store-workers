@@ -2,6 +2,9 @@
 
 const Footer = () => {
     const year = new Date().getFullYear();
+    const commitHash = '__COMMIT_HASH__';
+    const commitRepo = '__COMMIT_REPO__';
+    const hasCommit = commitHash.length > 0 && commitHash[0] !== '_';
 
     return (
         <footer className="border-t border-slate-700/50 bg-slate-900/50 mt-12">
@@ -40,8 +43,21 @@ const Footer = () => {
                         <span className="text-gray-400">原版项目，by Peng-YM</span>
                     </div>
 
-                    {/* 版权 */}
+                    {/* 版本 / 版权 */}
                     <div className="flex items-center justify-center gap-2 text-gray-600 pt-2 border-t border-slate-800">
+                        {hasCommit && (
+                            <>
+                                <a
+                                    href={`https://github.com/${commitRepo}/commit/${commitHash}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="font-mono text-xs hover:text-cyan-400 transition-colors"
+                                >
+                                    {commitHash}
+                                </a>
+                                <span>•</span>
+                            </>
+                        )}
                         <span>© {year}</span>
                         <span>•</span>
                         <span>Made with ❤️</span>

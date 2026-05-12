@@ -1,0 +1,152 @@
+name: API Smoke Test
+
+on:
+  pull_request:
+    paths-ignore:
+      - 'README.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - 'docs/**'
+      - '*.md'
+  workflow_dispatch:
+
+jobs:
+  test-workers:
+    runs-on: ubuntu-latest
+    name: Workers API Test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: latest
+
+      - name: Fetch Sub-Store source
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: bash scripts/fetch-substore.sh
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install backend dependencies
+        run: pnpm run install:backend
+
+      - name: Configure wrangler.toml
+        run: |
+          cp wrangler.toml.example wrangler.toml
+          sed -i 's/__JWT_SECRET__/test-jwt-secret-for-ci-testing-32chars/g' wrangler.toml
+
+      - name: Start dev server
+        run: |
+          pnpm run dev:workers &
+          echo "DEV_PID=$!" >> "$GITHUB_ENV"
+
+      - name: Wait for server
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3000/api/dashboard/settings/public > /dev/null 2>&1; then
+              echo "服务器就绪 (${i}s)"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::服务器未在 120s 内就绪"
+          exit 1
+
+      - name: Run API tests
+        run: node scripts/test-dashboard.js http://localhost:3000
+
+      - name: Stop dev server
+        if: always()
+        run: |
+          kill "$DEV_PID" 2>/dev/null || true
+          pkill -f "vite" 2>/dev/null || true
+
+  test-deno:
+    runs-on: ubuntu-latest
+    name: Deno API Test
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Fetch Sub-Store source
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: bash scripts/fetch-substore.sh
+
+      - name: Install dependencies
+        run: deno install
+
+      - name: Install backend dependencies
+        run: deno task install:backend
+
+      - name: Build dashboard
+        run: deno task build:dashboard
+
+      - name: Run database migration
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+        run: deno task migrate
+
+      - name: Start Deno server
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+          PORT: '8000'
+          JWT_SECRET: test-jwt-secret-for-ci-testing-32chars
+        run: |
+          deno task dev &
+          echo "DEV_PID=$!" >> "$GITHUB_ENV"
+
+      - name: Wait for server
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:8000/api/dashboard/settings/public > /dev/null 2>&1; then
+              echo "服务器就绪 (${i}s)"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::Deno 服务器未在 120s 内就绪"
+          exit 1
+
+      - name: Run API tests
+        run: node scripts/test-dashboard.js http://localhost:8000
+
+      - name: Stop Deno server
+        if: always()
+        run: kill "$DEV_PID" 2>/dev/null || true

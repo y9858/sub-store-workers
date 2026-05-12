@@ -138,6 +138,16 @@ jobs:
         working-directory: build
         run: pnpm install
 
+      - name: Inject commit info
+        working-directory: build
+        env:
+          COMMIT_HASH: ${{ github.sha }}
+          COMMIT_REPO: ${{ github.repository }}
+        run: |
+          SHORT_SHA=$(echo "$COMMIT_HASH" | cut -c1-7)
+          sed -i "s/'__COMMIT_HASH__'/'${SHORT_SHA}'/g" dashboard/components/Footer.jsx
+          sed -i "s|'__COMMIT_REPO__'|'${COMMIT_REPO}'|g" dashboard/components/Footer.jsx
+
       - name: Build with Vite
         working-directory: build
         run: pnpm run build:workers

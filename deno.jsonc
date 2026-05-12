@@ -5,14 +5,15 @@
   // - Deploy build/runtime behavior should read from this file.
   "nodeModulesDir": "auto",
   "tasks": {
-    "build": "deno task build:deploy",
+    "build": "deno task fetch:substore && deno task build:deno",
     "build:dashboard": "vite build --config vite.deno.config.js",
-    "build:deploy": "deno task fetch:substore && deno run prepare:quickjs-wasm && deno task build:dashboard && deno run build:substore-deno",
-    "build:deno": "deno run prepare:quickjs-wasm && deno task build:dashboard && deno run build:substore-deno",
+    "build:deno": "npm run prepare:quickjs-wasm && deno task build:dashboard && deno task build:substore-deno",
+    "build:substore-deno": "deno run -A scripts/build-substore-deno-runtime.mjs",
     "migrate": "deno run -A scripts/deno-postgres-migrate.mjs",
-    "dev:deno": "deno run prepare:quickjs-wasm && deno run build:substore-deno && deno run -A src/deno.js",
+    "dev": "npm run prepare:quickjs-wasm && deno task build:substore-deno && deno run -A src/deno.js",
     "fetch:substore": "bash scripts/fetch-substore.sh && deno task install:backend",
-    "install:backend": "cd sub-store/backend && npm install --ignore-scripts"
+    "install:backend": "cd sub-store/backend && npm install --ignore-scripts",
+    "deploy:local": "deno deploy --app sub-store --prod --allow-node-modules"
   },
   "allowScripts": [
     "npm:esbuild@0.27.3",
