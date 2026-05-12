@@ -20,6 +20,8 @@ export function subStoreTransformPlugin() {
     let processorsFileSeen = false;
     let openApiDebugPatchApplied = 0;
     let openApiDebugFileSeen = false;
+    let rsPatchApplied = 0;
+    let rsFileSeen = false;
     let subStoreFileSeen = false;
 
     const requiredTargetFiles = [
@@ -28,6 +30,7 @@ export function subStoreTransformPlugin() {
         ['download.js', () => downloadFileSeen, () => downloadPatchApplied],
         ['processors/index.js', () => processorsFileSeen, () => processorsPatchApplied],
         ['core/app.js', () => openApiDebugFileSeen, () => openApiDebugPatchApplied],
+        ['utils/rs.js', () => rsFileSeen, () => rsPatchApplied],
     ];
 
     const dangerousRequireNames = [
@@ -398,6 +401,38 @@ const tasks = {
                     } else {
                         this.error('[sub-store-transform] core/app.js debug 补丁未应用：未命中 OpenAPI 初始化行');
                     }
+                }
+            }
+
+            if (id.includes('sub-store/backend/src/utils/rs.js')) {
+                rsFileSeen = true;
+                contents = `import { createHash } from 'node:crypto';
+
+function pemToDerBuffer(caStr) {
+    const pem = String(caStr || '');
+    const base64 = pem
+        .replace(/-----BEGIN[^-]+-----/g, '')
+        .replace(/-----END[^-]+-----/g, '')
+        .replace(/\s+/g, '');
+    return Buffer.from(base64, 'base64');
+}
+
+export function generateFingerprint(caStr) {
+    const derBuffer = pemToDerBuffer(caStr);
+    const fingerprint = createHash('sha256').update(derBuffer).digest('hex');
+    return fingerprint.match(/.{2}/g).join(':').toUpperCase();
+}
+
+export default {
+    generateFingerprint,
+};
+`;
+                rsPatchApplied += 1;
+                if (contents.includes('jsrsasign')) {
+                    this.error('[sub-store-transform] utils/rs.js 补丁自检失败：仍包含 jsrsasign');
+                }
+                if (!contents.includes("from 'node:crypto'")) {
+                    this.error('[sub-store-transform] utils/rs.js 补丁自检失败：未使用 node:crypto');
                 }
             }
 

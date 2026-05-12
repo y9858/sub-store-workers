@@ -71,7 +71,7 @@ export async function handle({ request, env, route, services }) {
             return errorResponse('Not Found', 404);
         }
     } catch (err) {
-        logError('[Dashboard]', err);
+        logError('[Dashboard]', err?.stack || err?.message || err);
         return errorResponse(err?.message || 'Internal Server Error', 500);
     }
 

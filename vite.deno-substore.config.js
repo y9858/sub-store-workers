@@ -21,6 +21,7 @@ export default defineConfig({
             fileName: () => 'substore-runtime.js',
         },
         rollupOptions: {
+            external: ['node:crypto'],
             output: {
                 inlineDynamicImports: true,
             },

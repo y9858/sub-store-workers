@@ -72,6 +72,6 @@ export function ensureIndexSchema(stateStorageSql, storage) {
             storage.sql`ALTER TABLE mmdb_meta ADD COLUMN build_epoch INTEGER;`;
         }
     } catch (err) {
-        logError('[IndexSchema] failed to ensure mmdb_meta columns:', err?.message || err);
+        logError('[IndexSchema] failed to ensure mmdb_meta columns:', err?.stack || err?.message || err);
     }
 }

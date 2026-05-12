@@ -78,7 +78,7 @@ export async function ensureGeoDbLoaded(env, { requestId = 'unknown' } = {}) {
         } catch (e) {
             if (!cache.loggedMissing) {
                 cache.loggedMissing = true;
-                logError('[GeoIP] failed to load MMDB from runtime storage:', e?.message || e);
+                logError('[GeoIP] failed to load MMDB from runtime storage:', e?.stack || e?.message || e);
                 logError('[GeoIP] expected mmdb in storage: Country.mmdb, Country-asn.mmdb');
             }
         }

@@ -31,7 +31,7 @@ export async function handleIndexEntry({ request, env, pool, services }) {
             services: services || createRuntimeServices({ pool }),
         });
     } catch (err) {
-        logError(`[DenoIndex] [${requestId}] unhandled error:`, err?.message || err);
+        logError(`[DenoIndex] [${requestId}] unhandled error:`, err?.stack || err?.message || err);
         return errorResponse('Internal Server Error', 500);
     }
 }

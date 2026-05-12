@@ -29,7 +29,7 @@ export async function handleUserEntry({ request, env, pool, services }) {
             services: services || createRuntimeServices({ pool }),
         });
     } catch (err) {
-        logError(`[DenoUser] [${requestId}] unhandled error:`, err?.message || err);
+        logError(`[DenoUser] [${requestId}] unhandled error:`, err?.stack || err?.message || err);
         return errorResponse('Internal Server Error', 500);
     }
 }

@@ -66,7 +66,7 @@ export async function runCronBatch({ settingsNormalizer, entryGateway }) {
         info(`[Cron] 定时任务执行完成，处理用户数: ${processed}`);
         return { processed, finishedAll, stopReason };
     } catch (err) {
-        logError('[Cron] 定时任务执行失败:', err?.message || err);
+        logError('[Cron] 定时任务执行失败:', err?.stack || err?.message || err);
         return { processed: 0, finishedAll: false, stopReason: 'error' };
     }
 }

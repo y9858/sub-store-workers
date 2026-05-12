@@ -36,7 +36,7 @@ export class IndexDO extends DurableObject {
                 services: this.runtimeServices,
             });
         } catch (err) {
-            logError(`[IndexDO] [${requestId}] unhandled error:`, err?.message || err);
+            logError(`[IndexDO] [${requestId}] unhandled error:`, err?.stack || err?.message || err);
             return errorResponse('Internal Server Error', 500);
         }
     }

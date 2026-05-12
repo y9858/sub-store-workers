@@ -35,7 +35,7 @@ export class UserDO extends DurableObject {
                 services: this.runtimeServices,
             });
         } catch (err) {
-            logError(`[UserDO] [${requestId}] unhandled error:`, err?.message || err);
+            logError(`[UserDO] [${requestId}] unhandled error:`, err?.stack || err?.message || err);
             return errorResponse('Internal Server Error', 500);
         }
     }

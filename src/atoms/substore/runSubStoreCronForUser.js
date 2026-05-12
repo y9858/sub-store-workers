@@ -96,7 +96,7 @@ function setupGlobalsForSubStore(env, userSettings) {
                         await sendPushoverNotification(notification.pushover, title, subtitle, content);
                     }
                 } catch (e) {
-                    logError('[Notification] 推送失败:', e?.message || e);
+                    logError('[Notification] 推送失败:', e?.stack || e?.message || e);
                 }
             };
             sendNotification();
@@ -237,7 +237,7 @@ export async function runSubStoreCronForUser({ user, env }) {
             initSubStore($request).catch((e) => {
                 if (timeoutId) clearTimeout(timeoutId);
                 subStoreContext.done = null;
-                logError(`[SubStoreAtom] [${requestId}] initSubStore failed:`, e?.message || e);
+                logError(`[SubStoreAtom] [${requestId}] initSubStore failed:`, e?.stack || e?.message || e);
                 resolve();
             });
         });

@@ -407,7 +407,8 @@ const AdminDashboard = () => {
                         setShowPwdModal(false);
                         if (success) {
                             setMustChangePassword(false);
-                            toast.success('密码修改成功！');
+                            toast.success('密码修改成功，请重新登录！');
+                            logout();
                         }
                     }}
                 />
