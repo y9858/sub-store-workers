@@ -4,6 +4,7 @@ const REGISTRY_KEY = '__substore_request_contexts__';
 const PROXIES_INSTALLED_KEY = '__substore_context_proxies_installed__';
 const RUNTIME_GLOBALS_INSTALLED_KEY = '__substore_runtime_globals_installed__';
 const FALLBACK_ENV_KEY = '__substore_runtime_fallback_env__';
+const IMPORT_CONTEXT_KEY = '__substore_import_context__';
 
 function getRegistry() {
     if (!globalThis[REGISTRY_KEY]) {
@@ -16,13 +17,54 @@ export function getActiveSubStoreContext() {
     return requestContext.getStore()?.subStore || null;
 }
 
+function getImportCapableSubStoreContext() {
+    return getActiveSubStoreContext() || globalThis[IMPORT_CONTEXT_KEY] || null;
+}
+
+function createImportPersistentStore(realStore) {
+    const values = new Map();
+    return {
+        read(key) {
+            const storageKey = key || '__default__';
+            if (values.has(storageKey)) return values.get(storageKey);
+            return realStore?.read?.(key) ?? null;
+        },
+        write(data, key) {
+            const storageKey = key || '__default__';
+            values.set(storageKey, data);
+            return true;
+        },
+    };
+}
+
+function createImportContext(context) {
+    return {
+        ...context,
+        persistentStore: createImportPersistentStore(context.persistentStore),
+    };
+}
+
+export async function runWithSubStoreImportContext(fn) {
+    const context = getActiveSubStoreContext();
+    if (!context) return await fn();
+    const importContext = createImportContext(context);
+    globalThis[IMPORT_CONTEXT_KEY] = importContext;
+    try {
+        return await fn();
+    } finally {
+        if (globalThis[IMPORT_CONTEXT_KEY] === importContext) {
+            delete globalThis[IMPORT_CONTEXT_KEY];
+        }
+    }
+}
+
 export function getSubStoreContextById(requestId) {
     if (!requestId) return null;
     return getRegistry().get(requestId) || null;
 }
 
 function getActiveSubStoreEnv() {
-    return getActiveSubStoreContext()?.env || globalThis[FALLBACK_ENV_KEY] || {};
+    return getImportCapableSubStoreContext()?.env || globalThis[FALLBACK_ENV_KEY] || {};
 }
 
 function createEnvProxy() {
@@ -94,10 +136,10 @@ export function installSubStoreContextGlobals() {
 
     globalThis.$persistentStore = {
         read(key) {
-            return getActiveSubStoreContext()?.persistentStore?.read(key) ?? null;
+            return getImportCapableSubStoreContext()?.persistentStore?.read(key) ?? null;
         },
         write(data, key) {
-            return getActiveSubStoreContext()?.persistentStore?.write(data, key) ?? false;
+            return getImportCapableSubStoreContext()?.persistentStore?.write(data, key) ?? false;
         },
     };
 

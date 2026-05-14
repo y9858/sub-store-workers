@@ -6,8 +6,10 @@
  */
 
 import { debug, error } from '../utils/logger.js';
+import { runWithSubStoreImportContext } from '../atoms/substore/subStoreRequestContext.js';
 
 let initialized = false;
+let loadPromise = null;
 
 async function importSubStoreEntry() {
     debug('[SubStore] loading registered runtime entry');
@@ -15,6 +17,28 @@ async function importSubStoreEntry() {
         throw new Error('SubStore runtime loader is not registered');
     }
     await globalThis.__loadSubStoreEntry__();
+}
+
+async function ensureSubStoreLoaded() {
+    if (initialized) return;
+    if (!loadPromise) {
+        loadPromise = runWithSubStoreImportContext(importSubStoreEntry).then(() => {
+            initialized = true;
+            debug('[SubStore] 首次初始化完成');
+        }).catch((e) => {
+            loadPromise = null;
+            throw e;
+        });
+    }
+    await loadPromise;
+}
+
+function dispatchSubStoreRequest($request) {
+    if (globalThis.__substore_dispatch__) {
+        globalThis.__substore_dispatch__($request);
+    } else {
+        error('[SubStore] dispatch 函数未找到！');
+    }
 }
 
 /**
@@ -25,25 +49,13 @@ async function importSubStoreEntry() {
 export async function initSubStore($request) {
     if (initialized) {
         debug('[SubStore] 已初始化，调用 dispatch 处理请求...');
-        // 已初始化时，直接调用 dispatch 处理当前请求
-        if (globalThis.__substore_dispatch__) {
-            globalThis.__substore_dispatch__($request);
-        } else {
-            error('[SubStore] dispatch 函数未找到！');
-        }
+        dispatchSubStoreRequest($request);
         return;
     }
 
-    await importSubStoreEntry();
-
-    initialized = true;
-    debug('[SubStore] 首次初始化完成');
+    await ensureSubStoreLoaded();
 
     // 在模块完全加载后调用 dispatch 处理首次请求
     // 这避免了在模块导入期间执行 async I/O（Workers 禁止此操作）
-    if (globalThis.__substore_dispatch__) {
-        globalThis.__substore_dispatch__($request);
-    } else {
-        error('[SubStore] dispatch 函数未找到！');
-    }
+    dispatchSubStoreRequest($request);
 }
