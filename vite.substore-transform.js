@@ -151,8 +151,9 @@ function __emitDone__(requestId, response) {
         context.done(response);
         return;
     }
-    if (typeof globalThis.$done === 'function') {
-        globalThis.$done(response);
+    const fallbackDone = globalThis.$done;
+    if (typeof fallbackDone === 'function') {
+        fallbackDone(response);
     }
 }`,
                     );
@@ -163,15 +164,19 @@ function __emitDone__(requestId, response) {
                     );
                     contents = contents.replace(
                         'const res = Response();',
-                        'const res = Response(req.__requestId);',
+                        'const res = Response({}, request.__requestId);',
+                    );
+                    contents = contents.replaceAll(
+                        'const res = Response(cors.headers);',
+                        'const res = Response(cors.headers, request.__requestId);',
                     );
                     contents = contents.replace(
                         /dispatch\s*\(\s*method\s*,\s*url\s*,\s*i\s*\)\s*;/g,
                         'dispatch(request, i + 1);',
                     );
                     contents = contents.replace(
-                        'function Response() {',
-                        'function Response(requestId) {',
+                        'function Response(corsHeaders = {}) {',
+                        'function Response(corsHeaders = {}, requestId) {',
                     );
                     contents = contents.replace(
                         '$done(response);',
@@ -203,6 +208,12 @@ function __emitDone__(requestId, response) {
                     }
                     if (!contents.includes('dispatch(request, i + 1);')) {
                         this.error('[sub-store-transform] express.js next() 补丁自检失败：仍可能把 method/url 当作 request 重新分发');
+                    }
+                    if (!contents.includes('function Response(corsHeaders = {}, requestId) {')) {
+                        this.error('[sub-store-transform] express.js Response 补丁自检失败：requestId 未绑定到 Response');
+                    }
+                    if (!contents.includes('Response(cors.headers, request.__requestId)')) {
+                        this.error('[sub-store-transform] express.js Response 补丁自检失败：cors 响应未绑定 requestId');
                     }
                 } else {
                     this.error('[sub-store-transform] express.js 补丁未应用：未命中 app.start/dispatch($request) 片段');
@@ -292,7 +303,7 @@ const tasks = {
                     const before = contents.slice(0, startIdx);
                     const chunk = contents.slice(startIdx, endIdx);
                     const after = contents.slice(endIdx);
-                    const requiredNeedles = ['tasks.has(id)', 'tasks.set(id, result)', 'const id = hex_md5('];
+                    const requiredNeedles = ['tasks.has(id)', 'tasks.set(id, rawResult)', 'const id = hex_md5('];
                     const missing = requiredNeedles.filter((n) => !chunk.includes(n));
                     if (missing.length > 0) {
                         this.error(`[sub-store-transform] download.js 结构已变化，补丁未应用：缺少关键片段: ${missing.join(', ')}`);
