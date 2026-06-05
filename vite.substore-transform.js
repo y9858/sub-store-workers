@@ -127,6 +127,16 @@ export default function getParser() {
 
             assertNoDangerousRequireResidue(contents, id, this);
 
+            if (id.includes('utils/cors.js')) {
+                contents = contents.replace(
+                    "'https://sub-store.vercel.app'",
+                    "'*'",
+                );
+                if (contents.includes("'https://sub-store.vercel.app'")) {
+                    this.error('[sub-store-transform] cors.js CORS 默认值替换未生效');
+                }
+            }
+
             if (id.includes('sub-store/backend/src/core/proxy-utils/parsers/peggy/')) {
                 contents = precompilePeggyParser(contents, id, this);
             }
